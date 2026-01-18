@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Інтерактивна гра: регіони Іспанії + Сеута і Мелілья</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<header>
+  <div class="topline">
+    <div>
+      <div class="title" id="pageTitle">Іспанія: 17 регіонів + 2 автономні міста</div>
+      <!-- <div class="subtitle" id="pageSubtitle">Правильно: область/місто зафарбується і з’явиться підпис. Гра закінчується, коли збереш усі</div> -->
+    </div>
+    <div class="modeMenu">
+      <button class="secondary active" id="modeFillBtn" type="button">Гра 1: Заповнення</button>
+      <button class="secondary" id="modeQuizBtn" type="button">Гра 2: Вгадай регіон</button>
+      <button class="secondary" id="modeHuntBtn" type="button">Гра 3: Знайди на мапі</button>
+      <div class="status" id="statusFill">Готово: 0 / …</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="mapWrap">
+      <div id="mapHost">Завантажую мапу…</div>
+    </div>
+  </section>
+
+  <aside class="card">
+    <div class="panel">
+      <div id="fillPanel">
+        <h2>Назви регіонів і міст (іспанською)</h2>
+        <div class="row">
+          <button class="secondary" id="shuffleBtn" type="button">Перемішати</button>
+          <button class="secondary" id="resetBtn" type="button">Скинути</button>
+        </div>
+        <div class="tiles" id="tiles"></div>
+        <div class="win" id="win"><strong>🎉 Вітаю!</strong><div class="winNote">Усе розміщено правильно</div></div>
+      </div>
+
+      <div id="quizPanel" class="hidden">
+        <h2>Вгадай регіон</h2>
+        <div class="quizBox">
+          <div class="quizPrompt">На мапі підсвічено регіон. Обери правильну назву за 10 секунд.</div>
+          <div class="quizOptions" id="quizOptions"></div>
+          <div class="quizBar" aria-hidden="true"><div class="quizBarFill" id="quizBarFill"></div></div>
+          <div class="quizScoreBar" aria-hidden="true"><div class="quizScoreBarFill" id="quizScoreBarFill"></div></div>
+          <div class="quizFeedback" id="quizFeedback"></div>
+          <div class="row">
+            <button class="primary" id="quizNextBtn" type="button">Почати</button>
+            <button class="primary hidden" id="quizPlayAgainBtn" type="button">Грати ще</button>
+            <button class="secondary" id="quizResetBtn" type="button">Скинути</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="huntPanel" class="hidden">
+        <h2>Знайди на мапі</h2>
+        <div class="quizBox">
+          <div class="huntTargetCard">Натисни на мапі:<div class="huntTargetName" id="huntTargetName">—</div></div>
+          <div class="quizBar" aria-hidden="true"><div class="quizBarFill" id="huntBarFill"></div></div>
+          <div class="quizScoreBar" aria-hidden="true"><div class="quizScoreBarFill" id="huntScoreBarFill"></div></div>
+          <div class="quizFeedback" id="huntFeedback"></div>
+          <div class="row">
+            <button class="primary" id="huntStartBtn" type="button">Почати</button>
+            <button class="primary hidden" id="huntPlayAgainBtn" type="button">Грати ще</button>
+            <button class="secondary" id="huntResetBtn" type="button">Скинути</button>
+          </div>
+        </div>
+      </div>
+      <!-- <div class="hint">Порада: якщо хочеш складніше — скажи, і я додам режим без підсвічування при наведенні</div> -->
+    </div>
+  </aside>
+</main>
+
+<script src="./script.js" defer></script>
+</body>
+</html>
