@@ -1,6 +1,9 @@
 (() => {
   'use strict';
 
+  const SUPPORTED_LANGS = ['en', 'uk', 'es'];
+  const LANG_STORAGE_KEY = 'map-gpt.uiLang';
+
   // SVG має path з id: ES-AN, ES-AR, ... + ES-CE, ES-ML
   const ID_TO_NAME = {
     'ES-AN': 'Andalucía',
@@ -49,6 +52,16 @@
   const quizPanel = document.getElementById('quizPanel');
   const huntPanel = document.getElementById('huntPanel');
 
+  const langSelectEl = document.getElementById('langSelect');
+  const langLabelEl = document.getElementById('langLabel');
+  const fillHeadingEl = document.getElementById('fillHeading');
+  const winTitleEl = document.getElementById('winTitle');
+  const winNoteEl = document.getElementById('winNote');
+  const quizHeadingEl = document.getElementById('quizHeading');
+  const quizPromptEl = document.getElementById('quizPrompt');
+  const huntHeadingEl = document.getElementById('huntHeading');
+  const huntTargetLabelEl = document.getElementById('huntTargetLabel');
+
   const quizOptionsEl = document.getElementById('quizOptions');
   const quizBarFillEl = document.getElementById('quizBarFill');
   const quizScoreBarFillEl = document.getElementById('quizScoreBarFill');
@@ -73,6 +86,242 @@
   let selectedName = null;
   let mode = 'fill'; // 'fill' | 'quiz' | 'hunt'
   let done = new Set();
+
+  let currentLang = 'es';
+  let mapLoadErrorKind = null; // null | 'file' | 'other'
+
+  const I18N = {
+    en: {
+      'doc.title': 'Interactive game: Spain regions + Ceuta and Melilla',
+      'lang.label': 'Language',
+      'lang.en': 'English',
+      'lang.uk': 'Українська',
+      'lang.es': 'Español',
+      'mode.aria': 'Game selection',
+      'mode.toggle': ({ n }) => `Game: ${n}`,
+      'mode.fill': 'Game 1: Fill in',
+      'mode.quiz': 'Game 2: Guess the region',
+      'mode.hunt': 'Game 3: Find on map',
+      'status.done': ({ doneCount, totalCount }) => `Done: ${doneCount} / ${totalCount}`,
+      'fill.heading': 'Region and city names (in Spanish)',
+      'btn.shuffle': 'Shuffle',
+      'btn.reset': 'Reset',
+      'win.title': '🎉 Congratulations!',
+      'win.note': 'Everything placed correctly',
+      'quiz.heading': 'Guess the region',
+      'quiz.prompt': 'A region is highlighted on the map. Choose the correct name in 10 seconds.',
+      'hunt.heading': 'Find on the map',
+      'hunt.targetLabel': 'Click on the map:',
+      'btn.start': 'Start',
+      'btn.tryAgain': 'Try again',
+      'btn.playAgain': 'Play again',
+      'pageTitle.fill': 'Spain: 17 regions + 2 autonomous cities — drag a name onto the map',
+      'pageTitle.quiz': 'Spain — game 2: guess the region',
+      'pageTitle.hunt': 'Spain — game 3: find it on the map',
+      'subtitle.fill': 'Correct: the region/city is filled and labeled. The game ends when you get them all.',
+      'subtitle.quiz': 'A region is highlighted: pick the correct name (4 options) in 10 seconds.',
+      'subtitle.hunt': 'A region name is shown: click it on the map before time runs out.',
+      'quiz.pickFail': "Couldn't pick a region for the question.",
+      'hunt.pickFail': "Couldn't pick a region for the question.",
+      'goal.reached': ({ points }) => `🎉 Goal reached: ${points} points`,
+      'load.loading': 'Loading map…',
+      'load.fetchFail': ({ status }) => `Failed to load ./spain.svg (HTTP ${status})`,
+      'load.svgMissing': 'spain.svg loaded, but no <svg> tag found (invalid XML?)',
+      'load.error.file':
+        'Failed to load spain.svg. You opened the page as a file (file://), and fetch for SVG is often blocked. Run via Live Server / a local server (e.g., VS Code Live Server) and open index.html.',
+      'load.error.other':
+        'Failed to load spain.svg. Make sure index.html and spain.svg are in the same folder.',
+      'common.dash': '—',
+    },
+    uk: {
+      'doc.title': 'Інтерактивна гра: регіони Іспанії + Сеута і Мелілья',
+      'lang.label': 'Мова',
+      'lang.en': 'Англійська',
+      'lang.uk': 'Українська',
+      'lang.es': 'Іспанська',
+      'mode.aria': 'Вибір гри',
+      'mode.toggle': ({ n }) => `Гра: ${n}`,
+      'mode.fill': 'Гра 1: Заповнення',
+      'mode.quiz': 'Гра 2: Вгадай регіон',
+      'mode.hunt': 'Гра 3: Знайди на мапі',
+      'status.done': ({ doneCount, totalCount }) => `Готово: ${doneCount} / ${totalCount}`,
+      'fill.heading': 'Назви регіонів і міст (іспанською)',
+      'btn.shuffle': 'Перемішати',
+      'btn.reset': 'Скинути',
+      'win.title': '🎉 Вітаю!',
+      'win.note': 'Усе розміщено правильно',
+      'quiz.heading': 'Вгадай регіон',
+      'quiz.prompt': 'На мапі підсвічено регіон. Обери правильну назву за 10 секунд.',
+      'hunt.heading': 'Знайди на мапі',
+      'hunt.targetLabel': 'Натисни на мапі:',
+      'btn.start': 'Почати',
+      'btn.tryAgain': 'Спробувати ще',
+      'btn.playAgain': 'Грати ще',
+      'pageTitle.fill': 'Іспанія: 17 регіонів + 2 автономні міста — перетягни назву на мапу',
+      'pageTitle.quiz': 'Іспанія — гра 2: вгадай регіон',
+      'pageTitle.hunt': 'Іспанія — гра 3: знайди на мапі',
+      'subtitle.fill': 'Правильно: область/місто зафарбується і з’явиться підпис. Гра закінчується, коли збереш усі',
+      'subtitle.quiz': 'Регіон підсвічено на мапі: обери правильну назву серед 4 варіантів за 10 секунд',
+      'subtitle.hunt': 'Показано назву регіону: натисни його на мапі, поки не закінчиться шкала часу',
+      'quiz.pickFail': 'Не вдалося вибрати регіон для загадки.',
+      'hunt.pickFail': 'Не вдалося вибрати регіон для питання.',
+      'goal.reached': ({ points }) => `🎉 Мета досягнута: ${points} балів`,
+      'load.loading': 'Завантажую мапу…',
+      'load.fetchFail': ({ status }) => `Не вдалося завантажити ./spain.svg (HTTP ${status})`,
+      'load.svgMissing': 'Файл spain.svg завантажився, але SVG-тег не знайдено (пошкоджений XML?)',
+      'load.error.file':
+        'Не вдалося завантажити spain.svg. Ти відкрив сторінку як файл (file://), а fetch для SVG часто блокується. Запусти через Live Server / локальний сервер (наприклад, VS Code Live Server) і відкрий index.html.',
+      'load.error.other':
+        'Не вдалося завантажити spain.svg. Переконайся, що index.html і spain.svg лежать в одній теці.',
+      'common.dash': '—',
+    },
+    es: {
+      'doc.title': 'Juego interactivo: regiones de España + Ceuta y Melilla',
+      'lang.label': 'Idioma',
+      'lang.en': 'Inglés',
+      'lang.uk': 'Ucraniano',
+      'lang.es': 'Español',
+      'mode.aria': 'Selección de juego',
+      'mode.toggle': ({ n }) => `Juego: ${n}`,
+      'mode.fill': 'Juego 1: Rellenar',
+      'mode.quiz': 'Juego 2: Adivina la región',
+      'mode.hunt': 'Juego 3: Encuentra en el mapa',
+      'status.done': ({ doneCount, totalCount }) => `Completado: ${doneCount} / ${totalCount}`,
+      'fill.heading': 'Nombres de regiones y ciudades (en español)',
+      'btn.shuffle': 'Mezclar',
+      'btn.reset': 'Reiniciar',
+      'win.title': '🎉 ¡Enhorabuena!',
+      'win.note': 'Todo está colocado correctamente',
+      'quiz.heading': 'Adivina la región',
+      'quiz.prompt': 'En el mapa se resalta una región. Elige el nombre correcto en 10 segundos.',
+      'hunt.heading': 'Encuentra en el mapa',
+      'hunt.targetLabel': 'Haz clic en el mapa:',
+      'btn.start': 'Empezar',
+      'btn.tryAgain': 'Intentar de nuevo',
+      'btn.playAgain': 'Jugar otra vez',
+      'pageTitle.fill': 'España: 17 regiones + 2 ciudades autónomas — arrastra el nombre al mapa',
+      'pageTitle.quiz': 'España — juego 2: adivina la región',
+      'pageTitle.hunt': 'España — juego 3: encuéntrala en el mapa',
+      'subtitle.fill': 'Correcto: la región/ciudad se colorea y aparece la etiqueta. Termina cuando las completes todas.',
+      'subtitle.quiz': 'La región está resaltada: elige el nombre correcto (4 opciones) en 10 segundos.',
+      'subtitle.hunt': 'Se muestra el nombre de la región: haz clic en el mapa antes de que se acabe el tiempo.',
+      'quiz.pickFail': 'No se pudo elegir una región para la pregunta.',
+      'hunt.pickFail': 'No se pudo elegir una región para la pregunta.',
+      'goal.reached': ({ points }) => `🎉 Meta alcanzada: ${points} puntos`,
+      'load.loading': 'Cargando mapa…',
+      'load.fetchFail': ({ status }) => `No se pudo cargar ./spain.svg (HTTP ${status})`,
+      'load.svgMissing': 'spain.svg se cargó, pero no se encontró la etiqueta <svg> (¿XML inválido?)',
+      'load.error.file':
+        'No se pudo cargar spain.svg. Abriste la página como archivo (file://) y a menudo fetch para SVG está bloqueado. Ejecuta con Live Server / un servidor local (p. ej., VS Code Live Server) y abre index.html.',
+      'load.error.other':
+        'No se pudo cargar spain.svg. Asegúrate de que index.html y spain.svg estén en la misma carpeta.',
+      'common.dash': '—',
+    },
+  };
+
+  function normalizeToSupportedLang(tag) {
+    if (!tag) return null;
+    const base = String(tag).toLowerCase().split(/[-_]/)[0];
+    if (SUPPORTED_LANGS.includes(base)) return base;
+    return null;
+  }
+
+  function t(key, vars) {
+    const entry = (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.en[key];
+    if (typeof entry === 'function') return entry(vars || {});
+    return entry ?? key;
+  }
+
+  function applyStaticTranslations() {
+    document.title = t('doc.title');
+    document.documentElement.lang = currentLang;
+
+    if (langLabelEl) langLabelEl.textContent = t('lang.label');
+    if (modeButtonsEl) modeButtonsEl.setAttribute('aria-label', t('mode.aria'));
+
+    if (modeFillBtn) modeFillBtn.textContent = t('mode.fill');
+    if (modeQuizBtn) modeQuizBtn.textContent = t('mode.quiz');
+    if (modeHuntBtn) modeHuntBtn.textContent = t('mode.hunt');
+
+    if (fillHeadingEl) fillHeadingEl.textContent = t('fill.heading');
+    if (shuffleBtn) shuffleBtn.textContent = t('btn.shuffle');
+    if (resetBtn) resetBtn.textContent = t('btn.reset');
+    if (winTitleEl) winTitleEl.textContent = t('win.title');
+    if (winNoteEl) winNoteEl.textContent = t('win.note');
+
+    if (quizHeadingEl) quizHeadingEl.textContent = t('quiz.heading');
+    if (quizPromptEl) quizPromptEl.textContent = t('quiz.prompt');
+    if (quizNextBtn && !quizState.started) quizNextBtn.textContent = t('btn.start');
+    if (quizPlayAgainBtn) quizPlayAgainBtn.textContent = t('btn.playAgain');
+    if (quizResetBtn) quizResetBtn.textContent = t('btn.reset');
+
+    if (huntHeadingEl) huntHeadingEl.textContent = t('hunt.heading');
+    if (huntTargetLabelEl) huntTargetLabelEl.textContent = t('hunt.targetLabel');
+    if (huntStartBtn && !huntState.started) huntStartBtn.textContent = t('btn.start');
+    if (huntPlayAgainBtn) huntPlayAgainBtn.textContent = t('btn.playAgain');
+    if (huntResetBtn) huntResetBtn.textContent = t('btn.reset');
+
+    // Keep the selector labels in sync with the current UI language.
+    if (langSelectEl) {
+      const optEn = langSelectEl.querySelector('option[value="en"]');
+      const optUk = langSelectEl.querySelector('option[value="uk"]');
+      const optEs = langSelectEl.querySelector('option[value="es"]');
+      if (optEn) optEn.textContent = t('lang.en');
+      if (optUk) optUk.textContent = t('lang.uk');
+      if (optEs) optEs.textContent = t('lang.es');
+    }
+
+    // If the map isn't loaded yet (or failed), translate the placeholder/error text.
+    const hasSvg = !!mapHost.querySelector('svg');
+    if (!hasSvg) {
+      if (mapLoadErrorKind === 'file') mapHost.textContent = t('load.error.file');
+      else if (mapLoadErrorKind === 'other') mapHost.textContent = t('load.error.other');
+      else mapHost.textContent = t('load.loading');
+    }
+  }
+
+  function setLanguage(nextLang, { persist = true } = {}) {
+    const normalized = normalizeToSupportedLang(nextLang) ?? 'en';
+    currentLang = normalized;
+    if (persist) {
+      try {
+        localStorage.setItem(LANG_STORAGE_KEY, normalized);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (langSelectEl) langSelectEl.value = normalized;
+
+    applyStaticTranslations();
+    updateModeUI();
+    setStatus();
+
+    // Ensure mode buttons reflect the language (start/try again).
+    if (mode === 'quiz' && !quizState.started) quizNextBtn.textContent = t('btn.start');
+    if (mode === 'hunt' && !huntState.started) huntStartBtn.textContent = t('btn.start');
+  }
+
+  function pickInitialLanguage() {
+    // 1) Stored preference
+    try {
+      const stored = localStorage.getItem(LANG_STORAGE_KEY);
+      const normalized = normalizeToSupportedLang(stored);
+      if (normalized) return { lang: normalized, persist: true };
+    } catch {
+      // ignore
+    }
+
+    // 2) Browser locale(s)
+    const candidates = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language];
+    for (const c of candidates) {
+      const normalized = normalizeToSupportedLang(c);
+      if (normalized) return { lang: normalized, persist: false };
+    }
+    return { lang: 'es', persist: false };
+  }
 
   const quizState = {
     started: false,
@@ -127,7 +376,7 @@
   }
 
   function setStatus() {
-    statusFillEl.textContent = `Готово: ${done.size} / ${TOTAL}`;
+    statusFillEl.textContent = t('status.done', { doneCount: done.size, totalCount: TOTAL });
     winEl.style.display = done.size === TOTAL ? 'block' : 'none';
   }
 
@@ -492,7 +741,7 @@
 
     if (quizState.score >= QUIZ_SCORE_TARGET) {
       quizState.completed = true;
-      setQuizFeedback(`🎉 Мета досягнута: ${QUIZ_SCORE_TARGET} балів`);
+      setQuizFeedback(t('goal.reached', { points: QUIZ_SCORE_TARGET }));
       quizPlayAgainBtn.classList.remove('hidden');
       stopQuizNextTimeout();
       return;
@@ -553,9 +802,9 @@
     const pickedId = pickRandomId(QUIZ_TARGET_IDS, svg);
 
     if (!pickedId) {
-      setQuizFeedback('Не вдалося вибрати регіон для загадки.');
+      setQuizFeedback(t('quiz.pickFail'));
       quizNextBtn.disabled = false;
-      quizNextBtn.textContent = 'Спробувати ще';
+      quizNextBtn.textContent = t('btn.tryAgain');
       return;
     }
 
@@ -592,7 +841,7 @@
     setQuizProgress01(1);
     setQuizScoreProgress(0);
     quizNextBtn.disabled = false;
-    quizNextBtn.textContent = 'Почати';
+    quizNextBtn.textContent = t('btn.start');
     quizNextBtn.classList.remove('hidden');
     quizPlayAgainBtn.classList.add('hidden');
   }
@@ -718,7 +967,7 @@
 
     if (huntState.score >= QUIZ_SCORE_TARGET) {
       huntState.completed = true;
-      setHuntFeedback(`🎉 Мета досягнута: ${QUIZ_SCORE_TARGET} балів`);
+      setHuntFeedback(t('goal.reached', { points: QUIZ_SCORE_TARGET }));
       huntPlayAgainBtn.classList.remove('hidden');
       stopHuntNextTimeout();
       return;
@@ -746,10 +995,10 @@
     // Ceuta/Melilla не беруть участі як загадка (але можуть бути “неправильним кліком”)
     const pickedId = pickRandomId(QUIZ_TARGET_IDS, svg);
     if (!pickedId) {
-      setHuntFeedback('Не вдалося вибрати регіон для питання.');
+      setHuntFeedback(t('hunt.pickFail'));
       huntStartBtn.classList.remove('hidden');
       huntStartBtn.disabled = false;
-      huntStartBtn.textContent = 'Спробувати ще';
+      huntStartBtn.textContent = t('btn.tryAgain');
       return;
     }
 
@@ -782,14 +1031,14 @@
     huntState.correctName = null;
     huntState.score = 0;
 
-    huntTargetNameEl.textContent = '—';
+    huntTargetNameEl.textContent = t('common.dash');
     setHuntFeedback('');
     setHuntProgress01(1);
     setHuntScoreProgress(0);
 
     huntStartBtn.classList.remove('hidden');
     huntStartBtn.disabled = false;
-    huntStartBtn.textContent = 'Почати';
+    huntStartBtn.textContent = t('btn.start');
     huntPlayAgainBtn.classList.add('hidden');
   }
 
@@ -810,27 +1059,28 @@
     modeHuntBtn.classList.toggle('active', isHunt);
 
     if (modeMenuToggleBtn) {
-      modeMenuToggleBtn.textContent = isFill ? 'Гра: 1' : isQuiz ? 'Гра: 2' : 'Гра: 3';
+      modeMenuToggleBtn.textContent = isFill
+        ? t('mode.toggle', { n: 1 })
+        : isQuiz
+          ? t('mode.toggle', { n: 2 })
+          : t('mode.toggle', { n: 3 });
       modeMenuToggleBtn.setAttribute('aria-expanded', modeMenuEl?.classList.contains('open') ? 'true' : 'false');
     }
 
     if (isFill) {
-      pageTitleEl.textContent = 'Іспанія: 17 регіонів + 2 автономні міста — перетягни назву на мапу';
+      pageTitleEl.textContent = t('pageTitle.fill');
       if (pageSubtitleEl) {
-        pageSubtitleEl.textContent =
-          'Правильно: область/місто зафарбується і з’явиться підпис. Гра закінчується, коли збереш усі';
+        pageSubtitleEl.textContent = t('subtitle.fill');
       }
     } else if (isQuiz) {
-      pageTitleEl.textContent = 'Іспанія — гра 2: вгадай регіон';
+      pageTitleEl.textContent = t('pageTitle.quiz');
       if (pageSubtitleEl) {
-        pageSubtitleEl.textContent =
-          'Регіон підсвічено на мапі: обери правильну назву серед 4 варіантів за 10 секунд';
+        pageSubtitleEl.textContent = t('subtitle.quiz');
       }
     } else {
-      pageTitleEl.textContent = 'Іспанія — гра 3: знайди на мапі';
+      pageTitleEl.textContent = t('pageTitle.hunt');
       if (pageSubtitleEl) {
-        pageSubtitleEl.textContent =
-          'Показано назву регіону: натисни його на мапі, поки не закінчиться шкала часу';
+        pageSubtitleEl.textContent = t('subtitle.hunt');
       }
     }
   }
@@ -901,11 +1151,11 @@
 
   async function loadSvg() {
     const res = await fetch('./spain.svg');
-    if (!res.ok) throw new Error(`Не вдалося завантажити ./spain.svg (HTTP ${res.status})`);
+    if (!res.ok) throw new Error(t('load.fetchFail', { status: res.status }));
     const text = await res.text();
     const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
     const svg = doc.querySelector('svg');
-    if (!svg) throw new Error('Файл spain.svg завантажився, але SVG-тег не знайдено (пошкоджений XML?)');
+    if (!svg) throw new Error(t('load.svgMissing'));
 
     // У spain.svg немає viewBox, тому при видаленні width/height браузер може
     // некоректно масштабувати й «обрізати» низ. Додаємо viewBox з оригінальних розмірів.
@@ -1042,13 +1292,24 @@
     resetHunt();
   });
 
+  // --- Language init / selector wiring ---
+
+  const initial = pickInitialLanguage();
+  setLanguage(initial.lang, { persist: initial.persist });
+
+  if (langSelectEl) {
+    langSelectEl.addEventListener('change', () => {
+      setLanguage(langSelectEl.value, { persist: true });
+    });
+  }
+
   loadSvg().catch((err) => {
     if (location.protocol === 'file:') {
-      mapHost.textContent =
-        'Не вдалося завантажити spain.svg. Ти відкрив сторінку як файл (file://), а fetch для SVG часто блокується. Запусти через Live Server / локальний сервер (наприклад, VS Code Live Server) і відкрий index.html.';
+      mapLoadErrorKind = 'file';
+      mapHost.textContent = t('load.error.file');
     } else {
-      mapHost.textContent =
-        'Не вдалося завантажити spain.svg. Переконайся, що index.html і spain.svg лежать в одній теці.';
+      mapLoadErrorKind = 'other';
+      mapHost.textContent = t('load.error.other');
     }
     console.error(err);
   });
