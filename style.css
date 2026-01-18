@@ -107,6 +107,8 @@ button.secondary { background: #1a2746; color: #e9eefb; border: 1px solid #22304
   /* Games 2/3: fit everything into the viewport (no page scroll) */
   body[data-mode="quiz"],
   body[data-mode="hunt"] {
+    height: 100vh;
+    height: 100svh;
     height: 100dvh;
     overflow: hidden;
     display: flex;
@@ -134,8 +136,22 @@ button.secondary { background: #1a2746; color: #e9eefb; border: 1px solid #22304
 
   body[data-mode="quiz"] .panel,
   body[data-mode="hunt"] .panel { min-height: 0; overflow: hidden; }
+
+  /* Constrain quiz/hunt panels so only the options area scrolls */
+  body[data-mode="quiz"] #quizPanel:not(.hidden),
+  body[data-mode="hunt"] #huntPanel:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   body[data-mode="quiz"] .quizBox,
-  body[data-mode="hunt"] .quizBox { min-height: 0; }
+  body[data-mode="hunt"] .quizBox {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  body[data-mode="quiz"] .quizOptions { min-height: 0; overflow: auto; }
 }
 
 @media (max-width: 520px) {
