@@ -10,6 +10,9 @@ header { padding: 16px 18px; border-bottom: 1px solid #22304a; }
 .modeMenu button { padding: 9px 12px; }
 .modeMenu button.active { outline: 2px solid #2b6cff; outline-offset: 2px; }
 
+.modeMenuToggle { display: none; }
+.modeButtons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
 main { display: grid; grid-template-columns: 1.8fr 0.9fr; gap: 14px; padding: 14px; }
 .card { background: #111a2e; border: 1px solid #22304a; border-radius: 16px; overflow: hidden; }
 
@@ -45,7 +48,7 @@ button.secondary { background: #1a2746; color: #e9eefb; border: 1px solid #22304
 .hidden { display: none !important; }
 .quizBox { display: flex; flex-direction: column; gap: 10px; }
 .quizPrompt { font-size: 14px; opacity: .92; }
-.quizOptions { display: grid; gap: 10px; }
+.quizOptions { display: grid; gap: 10px; flex: 1 1 auto; min-height: 0; overflow: auto; }
 .quizBar { height: 10px; border-radius: 999px; border: 1px solid #22304a; background: #0b1220; overflow: hidden; }
 .quizBarFill { height: 100%; width: 100%; background: #1fbf75; transform-origin: left center; }
 .quizScoreBar { height: 10px; border-radius: 999px; border: 1px solid #22304a; background: #0b1220; overflow: hidden; }
@@ -87,6 +90,39 @@ button.secondary { background: #1a2746; color: #e9eefb; border: 1px solid #22304
   main { grid-template-columns: 1fr; }
   #mapHost svg { max-height: 62vh; }
   .tiles { max-height: 32vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Games 2/3: fit everything into the viewport (no page scroll) */
+  body[data-mode="quiz"],
+  body[data-mode="hunt"] {
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  body[data-mode="quiz"] main,
+  body[data-mode="hunt"] main {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1.12fr 0.88fr;
+    gap: 12px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+  body[data-mode="quiz"] .card,
+  body[data-mode="hunt"] .card { min-height: 0; }
+
+  body[data-mode="quiz"] .mapWrap,
+  body[data-mode="hunt"] .mapWrap { height: 100%; display: flex; }
+  body[data-mode="quiz"] #mapHost,
+  body[data-mode="hunt"] #mapHost { flex: 1; min-height: 0; display: flex; }
+  body[data-mode="quiz"] #mapHost svg,
+  body[data-mode="hunt"] #mapHost svg { height: 100%; max-height: 100%; width: 100%; }
+
+  body[data-mode="quiz"] .panel,
+  body[data-mode="hunt"] .panel { min-height: 0; overflow: hidden; }
+  body[data-mode="quiz"] .quizBox,
+  body[data-mode="hunt"] .quizBox { min-height: 0; }
 }
 
 @media (max-width: 520px) {
@@ -96,4 +132,34 @@ button.secondary { background: #1a2746; color: #e9eefb; border: 1px solid #22304
   button { width: 100%; }
   .row { flex-direction: column; align-items: stretch; }
   #mapHost svg { max-height: 58vh; }
+
+  /* Compact game selector: dropdown menu */
+  .modeMenu { position: relative; gap: 8px; }
+  .modeMenuToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: auto;
+    white-space: nowrap;
+  }
+  .modeMenuToggle::after { content: '▾'; opacity: .9; }
+
+  .modeButtons {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 10;
+    background: #0f1730;
+    border: 1px solid #22304a;
+    border-radius: 14px;
+    padding: 8px;
+    flex-direction: column;
+    gap: 8px;
+    min-width: min(92vw, 360px);
+    box-shadow: 0 18px 45px rgba(0,0,0,.35);
+  }
+  .modeMenu.open .modeButtons { display: flex; }
+  .modeButtons button { width: 100%; }
 }

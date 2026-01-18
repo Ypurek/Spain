@@ -39,6 +39,9 @@
 
   const pageTitleEl = document.getElementById('pageTitle');
   const pageSubtitleEl = document.getElementById('pageSubtitle');
+  const modeMenuEl = document.querySelector('.modeMenu');
+  const modeMenuToggleBtn = document.getElementById('modeMenuToggle');
+  const modeButtonsEl = document.getElementById('modeButtons');
   const modeFillBtn = document.getElementById('modeFillBtn');
   const modeQuizBtn = document.getElementById('modeQuizBtn');
   const modeHuntBtn = document.getElementById('modeHuntBtn');
@@ -794,6 +797,9 @@
     const isFill = mode === 'fill';
     const isQuiz = mode === 'quiz';
     const isHunt = mode === 'hunt';
+
+    document.body.dataset.mode = mode;
+
     fillPanel.classList.toggle('hidden', !isFill);
     quizPanel.classList.toggle('hidden', !isQuiz);
     huntPanel.classList.toggle('hidden', !isHunt);
@@ -802,6 +808,11 @@
     modeFillBtn.classList.toggle('active', isFill);
     modeQuizBtn.classList.toggle('active', isQuiz);
     modeHuntBtn.classList.toggle('active', isHunt);
+
+    if (modeMenuToggleBtn) {
+      modeMenuToggleBtn.textContent = isFill ? 'Гра: 1' : isQuiz ? 'Гра: 2' : 'Гра: 3';
+      modeMenuToggleBtn.setAttribute('aria-expanded', modeMenuEl?.classList.contains('open') ? 'true' : 'false');
+    }
 
     if (isFill) {
       pageTitleEl.textContent = 'Іспанія: 17 регіонів + 2 автономні міста — перетягни назву на мапу';
@@ -824,6 +835,19 @@
     }
   }
 
+  function closeModeMenu() {
+    if (!modeMenuEl) return;
+    modeMenuEl.classList.remove('open');
+    if (modeMenuToggleBtn) modeMenuToggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleModeMenu() {
+    if (!modeMenuEl) return;
+    const next = !modeMenuEl.classList.contains('open');
+    modeMenuEl.classList.toggle('open', next);
+    if (modeMenuToggleBtn) modeMenuToggleBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+  }
+
   function setMode(next) {
     if (mode === next) return;
 
@@ -840,6 +864,7 @@
     if (mode === 'hunt') resetHunt();
 
     updateModeUI();
+    closeModeMenu();
   }
 
   function fillMapCompletely() {
@@ -944,6 +969,26 @@
     renderTiles(shuffle([...tilesEl.querySelectorAll('.tile')].map((t) => t.dataset.regionName)))
   );
   resetBtn.addEventListener('click', resetGame);
+
+  if (modeMenuToggleBtn) {
+    modeMenuToggleBtn.addEventListener('click', () => toggleModeMenu());
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!modeMenuEl) return;
+    if (!modeMenuEl.classList.contains('open')) return;
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    if (modeMenuEl.contains(target)) return;
+    closeModeMenu();
+  });
+
+  if (modeButtonsEl) {
+    modeButtonsEl.addEventListener('click', () => {
+      // Click on any menu item should collapse the dropdown on mobile.
+      closeModeMenu();
+    });
+  }
 
   modeFillBtn.addEventListener('click', () => setMode('fill'));
   modeQuizBtn.addEventListener('click', () => setMode('quiz'));

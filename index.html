@@ -14,9 +14,14 @@
       <!-- <div class="subtitle" id="pageSubtitle">Правильно: область/місто зафарбується і з’явиться підпис. Гра закінчується, коли збереш усі</div> -->
     </div>
     <div class="modeMenu">
-      <button class="secondary active" id="modeFillBtn" type="button">Гра 1: Заповнення</button>
-      <button class="secondary" id="modeQuizBtn" type="button">Гра 2: Вгадай регіон</button>
-      <button class="secondary" id="modeHuntBtn" type="button">Гра 3: Знайди на мапі</button>
+      <button class="secondary modeMenuToggle" id="modeMenuToggle" type="button" aria-haspopup="menu" aria-expanded="false">
+        Гра: 1
+      </button>
+      <div class="modeButtons" id="modeButtons" role="menu" aria-label="Вибір гри">
+        <button class="secondary active" id="modeFillBtn" type="button" role="menuitem">Гра 1: Заповнення</button>
+        <button class="secondary" id="modeQuizBtn" type="button" role="menuitem">Гра 2: Вгадай регіон</button>
+        <button class="secondary" id="modeHuntBtn" type="button" role="menuitem">Гра 3: Знайди на мапі</button>
+      </div>
       <div class="status" id="statusFill">Готово: 0 / …</div>
     </div>
   </div>
